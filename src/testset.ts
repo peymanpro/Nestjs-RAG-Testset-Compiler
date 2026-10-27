@@ -1,7 +1,7 @@
 import { parseMarkdownDocuments } from "./documents.ts";
 import { corpusFingerprint, normalizeQuestion, normalizeText, normalizeSourcePath, sha256 } from "./hash.ts";
 import type {
-  DriftEntry, DriftReport, DriftStatus, EvidenceReference, GenerateTestsetOptions,
+  ClaimInput, ClaimReference, DriftEntry, DriftReport, DriftStatus, EvidenceInput, EvidenceReference, GenerateTestsetOptions,
   MarkdownDocument, ScenarioSynthesizer, SyntheticCandidate, TestCase, Testset,
   ValidationIssue, ValidationResult,
 } from "./types.ts";
@@ -26,6 +26,29 @@ function stableCaseId(candidate: SyntheticCandidate): string {
   return `case-${sha256(`${normalizeQuestion(candidate.question)}\n${evidenceKey}`).slice(7, 19)}`;
 }
 
+
+function resolveEvidenceReference(
+  sections: ReturnType<typeof parseMarkdownDocuments>,
+  input: EvidenceInput,
+): EvidenceReference {
+  const section = lookupSection(sections, input.sourcePath, input.sectionTitle, input.sectionId);
+  return {
+    ...input,
+    sourcePath: normalizeSourcePath(input.sourcePath),
+    sectionId: section?.id ?? input.sectionId ?? "",
+    sectionHashAtGeneration: section?.contentHash ?? "",
+    quoteHash: sha256(normalizeText(input.quote)),
+  };
+}
+
+function stableClaimId(claim: ClaimInput, evidence: EvidenceReference[]): string {
+  const evidenceKey = evidence
+    .map((item) => \`\${item.sourcePath}\\0\${item.sectionId}\\0\${item.quoteHash}\`)
+    .sort()
+    .join("\\n");
+  return \`claim-\${sha256(\`\${normalizeQuestion(claim.text)}\\n\${evidenceKey}\`).slice(7, 19)}\`;
+}
+
 export async function generateTestset(
   documents: MarkdownDocument[],
   synthesizer: ScenarioSynthesizer,
@@ -35,14 +58,15 @@ export async function generateTestset(
   const corpusHash = corpusFingerprint(documents);
   const candidates = await synthesizer.generate(sections);
   const cases: TestCase[] = candidates.map((candidate) => {
-    const evidence: EvidenceReference[] = candidate.evidence.map((input) => {
-      const section = lookupSection(sections, input.sourcePath, input.sectionTitle, input.sectionId);
+    const evidence = candidate.evidence.map((input) => resolveEvidenceReference(sections, input));
+    const claims: ClaimReference[] | undefined = candidate.claims?.map((claim) => {
+      const claimEvidence = claim.evidence.map((input) => resolveEvidenceReference(sections, input));
       return {
-        ...input,
-        sourcePath: normalizeSourcePath(input.sourcePath),
-        sectionId: section?.id ?? input.sectionId ?? "",
-        sectionHashAtGeneration: section?.contentHash ?? "",
-        quoteHash: sha256(normalizeText(input.quote)),
+        id: stableClaimId(claim, claimEvidence),
+        text: claim.text.trim(),
+        ...(claim.kind ? { kind: claim.kind } : {}),
+        evidence: claimEvidence,
+        textHash: sha256(normalizeText(claim.text)),
       };
     });
     return {
@@ -52,6 +76,7 @@ export async function generateTestset(
       type: candidate.type,
       expectedBehavior: candidate.expectedBehavior,
       evidence,
+      ...(claims ? { claims } : {}),
       corpusHashAtGeneration: corpusHash,
     };
   });
@@ -85,6 +110,32 @@ export function validateTestset(documents: MarkdownDocument[], testset: Testset)
     issues.push({ code: "CORPUS_HASH_MISMATCH", severity: "warning", message: "The current corpus differs from the corpus used to generate this test set; run drift analysis." });
   }
 
+
+  const validateEvidenceReferences = (
+    references: EvidenceReference[],
+    caseId: string,
+    codePrefix: "EVIDENCE" | "CLAIM_EVIDENCE",
+  ): void => {
+    for (const evidence of references) {
+      let section;
+      try {
+        section = lookupSection(sections, evidence.sourcePath, evidence.sectionTitle, evidence.sectionId);
+      } catch {
+        section = undefined;
+      }
+      if (!section) {
+        issues.push({ code: \`\${codePrefix}_SECTION_MISSING\`, severity: "error", caseId, message: \`Evidence section not found or ambiguous: \${evidence.sourcePath} :: \${evidence.sectionTitle}.\` });
+        continue;
+      }
+      if (!section.content.includes(evidence.quote)) {
+        issues.push({ code: \`\${codePrefix}_QUOTE_NOT_FOUND\`, severity: "error", caseId, message: \`Evidence quote no longer exists verbatim in \${evidence.sourcePath} :: \${evidence.sectionTitle}.\` });
+      }
+      if (sha256(normalizeText(evidence.quote)) !== evidence.quoteHash) {
+        issues.push({ code: \`\${codePrefix}_HASH_MISMATCH\`, severity: "error", caseId, message: "Stored evidence quote hash does not match the stored quote." });
+      }
+    }
+  };
+
   for (const testCase of testset.cases) {
     if (ids.has(testCase.id)) issues.push({ code: "DUPLICATE_ID", severity: "error", caseId: testCase.id, message: `Duplicate test-case ID: ${testCase.id}` });
     ids.add(testCase.id);
@@ -111,22 +162,43 @@ export function validateTestset(documents: MarkdownDocument[], testset: Testset)
       issues.push({ code: "UNKNOWN_EXPECTED_BEHAVIOR", severity: "error", caseId: testCase.id, message: `Unknown expected behavior: ${String(testCase.expectedBehavior)}` });
     }
 
-    for (const evidence of testCase.evidence) {
-      let section;
-      try {
-        section = lookupSection(sections, evidence.sourcePath, evidence.sectionTitle, evidence.sectionId);
-      } catch {
-        section = undefined;
-      }
-      if (!section) {
-        issues.push({ code: "EVIDENCE_SECTION_MISSING", severity: "error", caseId: testCase.id, message: `Evidence section not found or ambiguous: ${evidence.sourcePath} :: ${evidence.sectionTitle}.` });
+    validateEvidenceReferences(testCase.evidence, testCase.id, "EVIDENCE");
+
+    if (testCase.claims !== undefined) {
+      if (!Array.isArray(testCase.claims)) {
+        issues.push({ code: "INVALID_CLAIMS_COLLECTION", severity: "error", caseId: testCase.id, message: "Test-case claims must be an array when provided." });
         continue;
       }
-      if (!section.content.includes(evidence.quote)) {
-        issues.push({ code: "EVIDENCE_QUOTE_NOT_FOUND", severity: "error", caseId: testCase.id, message: `Evidence quote no longer exists verbatim in ${evidence.sourcePath} :: ${evidence.sectionTitle}.` });
-      }
-      if (sha256(normalizeText(evidence.quote)) !== evidence.quoteHash) {
-        issues.push({ code: "EVIDENCE_HASH_MISMATCH", severity: "error", caseId: testCase.id, message: "Stored evidence quote hash does not match the stored quote." });
+      const claimIds = new Set<string>();
+      const claimTexts = new Set<string>();
+      for (const claim of testCase.claims) {
+        if (!claim || typeof claim !== "object") {
+          issues.push({ code: "INVALID_CLAIM", severity: "error", caseId: testCase.id, message: "Each claim must be an object." });
+          continue;
+        }
+        if (!claim.text?.trim()) {
+          issues.push({ code: "EMPTY_CLAIM_TEXT", severity: "error", caseId: testCase.id, message: "Claim text must not be empty." });
+        }
+        if (claimIds.has(claim.id)) {
+          issues.push({ code: "DUPLICATE_CLAIM_ID", severity: "error", caseId: testCase.id, message: \`Duplicate claim ID: \${claim.id}.\` });
+        }
+        claimIds.add(claim.id);
+        const normalizedClaim = normalizeQuestion(claim.text ?? "");
+        if (normalizedClaim && claimTexts.has(normalizedClaim)) {
+          issues.push({ code: "DUPLICATE_CLAIM", severity: "warning", caseId: testCase.id, message: "A claim duplicates another claim in the same test case after normalization." });
+        }
+        if (normalizedClaim) claimTexts.add(normalizedClaim);
+        if (sha256(normalizeText(claim.text ?? "")) !== claim.textHash) {
+          issues.push({ code: "CLAIM_HASH_MISMATCH", severity: "error", caseId: testCase.id, message: "Stored claim text hash does not match the claim text." });
+        }
+        if (claim.kind !== undefined && !["fact", "condition", "exception", "temporal", "numeric", "causal", "other"].includes(claim.kind)) {
+          issues.push({ code: "UNKNOWN_CLAIM_KIND", severity: "error", caseId: testCase.id, message: \`Unsupported claim kind: \${String(claim.kind)}.\` });
+        }
+        if (!Array.isArray(claim.evidence) || claim.evidence.length === 0) {
+          issues.push({ code: "CLAIM_EVIDENCE_REQUIRED", severity: "error", caseId: testCase.id, message: \`Claim \${claim.id || "(unknown)"} must cite at least one evidence quote.\` });
+        } else {
+          validateEvidenceReferences(claim.evidence, testCase.id, "CLAIM_EVIDENCE");
+        }
       }
     }
   }
@@ -152,7 +224,8 @@ export function analyzeCorpusDrift(documents: MarkdownDocument[], testset: Tests
     }
 
     let needsReview = false;
-    for (const evidence of testCase.evidence) {
+    const dependencies = [...testCase.evidence, ...(testCase.claims ?? []).flatMap((claim) => claim.evidence ?? [])];
+    for (const evidence of dependencies) {
       const section = lookupSection(sections, evidence.sourcePath, evidence.sectionTitle, evidence.sectionId);
       if (!section) {
         status = "stale";
