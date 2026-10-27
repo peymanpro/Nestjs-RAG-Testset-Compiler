@@ -146,3 +146,34 @@ test("does not report impact when the baseline and current corpora are identical
   assert.deepEqual(report.counts, { unaffected: 3, "needs-review": 0, stale: 0 });
   assert.equal(report.sectionChanges.length, 0);
 });
+
+
+test("parses optional model claims and attaches their evidence provenance", async () => {
+  const section = parseMarkdownDocuments(baseline).find((item) => item.sourcePath === "refunds.md")!;
+  const evidence = {
+    sourcePath: section.sourcePath,
+    sectionTitle: section.title,
+    sectionId: section.id,
+    quote: "Customers may request a refund within 7 days of purchase.",
+  };
+  const responseJson = {
+    cases: [{
+      question: "What is the refund request window?",
+      expectedAnswer: "Customers may request a refund within 7 days.",
+      type: "single-hop",
+      expectedBehavior: "answer",
+      evidence: [evidence],
+      claims: [{ text: "The refund request window is 7 days.", kind: "temporal", evidence: [evidence] }],
+    }],
+  };
+  const synthesizer = new (await import("../src/synthesizers.ts")).OpenAICompatibleSynthesizer({
+    apiKey: "test-key",
+    model: "test-model",
+    fetch: async () => new Response(JSON.stringify({
+      choices: [{ message: { content: JSON.stringify(responseJson) } }],
+    }), { status: 200, headers: { "content-type": "application/json" } }),
+  });
+  const set = await generateTestset(baseline, synthesizer, { strictEvidence: true });
+  assert.equal(set.cases[0]?.claims?.[0]?.text, "The refund request window is 7 days.");
+  assert.equal(validateTestset(baseline, set).valid, true);
+});
