@@ -56,15 +56,11 @@ export class RuleBasedDemoSynthesizer implements ScenarioSynthesizer {
     });
     return candidates.map((candidate) => ({
       ...candidate,
-      ...(candidate.expectedBehavior === "answer"
-        ? {
-            claims: candidate.evidence.map((item) => ({
-              text: candidate.type === "multi-hop" ? item.quote : candidate.expectedAnswer,
-              kind: "fact" as const,
-              evidence: candidate.type === "multi-hop" ? [item] : candidate.evidence,
-            })),
-          }
-        : { claims: [] }),
+      claims: candidate.expectedBehavior !== "answer"
+        ? []
+        : candidate.type === "multi-hop"
+          ? candidate.evidence.map((item) => ({ text: item.quote, kind: "fact" as const, evidence: [item] }))
+          : [{ text: candidate.expectedAnswer, kind: "fact" as const, evidence: candidate.evidence }],
     }));
   }
 }
