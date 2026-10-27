@@ -1,6 +1,8 @@
-# RAG Testset Compiler is a TypeScript library for evidence-linked RAG regression tests.
+# NestJS RAG Testset Compiler
 
-[![CI](https://github.com/peymanpro/RAG-Testset-Compiler/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/peymanpro/RAG-Testset-Compiler/actions/workflows/ci.yml)
+A TypeScript library for evidence-linked RAG regression tests.
+
+[![CI](https://github.com/peymanpro/Nestjs-RAG-Testset-Compiler/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/peymanpro/Nestjs-RAG-Testset-Compiler/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.13-brightgreen)](https://nodejs.org/)
 
@@ -10,7 +12,7 @@
 
 ## Why this library exists
 
-Synthetic RAG test generation already exists in projects such as Ragas and Promptfoo. RAG Testset Compiler focuses on the lifecycle after generation: every answerable case is linked to exact source evidence, its originating section is fingerprinted, and corpus changes produce explicit `current`, `needs-review`, or `stale` outcomes.
+Synthetic RAG test generation already exists in projects such as Ragas and Promptfoo. NestJS RAG Testset Compiler focuses on the lifecycle after generation: every answerable case is linked to exact source evidence, its originating section is fingerprinted, and corpus changes produce explicit `current`, `needs-review`, or `stale` outcomes.
 
 The project does not claim to be the first test-set generator or a replacement for established evaluation frameworks. Its product hypothesis is that evidence provenance and test-set maintenance can be a useful, framework-friendly TypeScript building block.
 
@@ -21,7 +23,7 @@ The project does not claim to be the first test-set generator or a replacement f
 - **Validation:** detect missing or ambiguous sources, broken quotes, hash mismatches, empty cases, duplicate IDs, and normalized duplicate questions.
 - **Provider-agnostic synthesis:** implement the small `ScenarioSynthesizer` interface for any model or generation approach.
 - **OpenAI-compatible adapter:** use a chat-completions endpoint with native `fetch`; no runtime provider SDK is required.
-- **NestJS integration:** optional dynamic module and injectable service under `rag-testset-compiler/nestjs`.
+- **NestJS integration:** optional dynamic module and injectable service under `nestjs-nestjs-rag-testset-compiler/nestjs`.
 - **CLI:** generate, validate, and diff JSON test sets; CI-friendly exit codes.
 - **npm and pnpm:** use either package manager for development and installation.
 - **Offline demo:** deterministic sample generation runs without API keys or network access.
@@ -34,9 +36,9 @@ The project does not claim to be the first test-set generator or a replacement f
 ## Installation
 
 ```bash
-npm install rag-testset-compiler
+npm install nestjs-nestjs-rag-testset-compiler
 # or
-pnpm add rag-testset-compiler
+pnpm add nestjs-nestjs-rag-testset-compiler
 ```
 
 For the NestJS adapter, install NestJS in your application as well. The peer dependency is optional for users of the core library.
@@ -55,8 +57,8 @@ import {
   validateTestset,
   analyzeCorpusDrift,
   OpenAICompatibleSynthesizer,
-} from "rag-testset-compiler";
-import type { MarkdownDocument } from "rag-testset-compiler";
+} from "nestjs-nestjs-rag-testset-compiler";
+import type { MarkdownDocument } from "nestjs-nestjs-rag-testset-compiler";
 
 const documents: MarkdownDocument[] = [
   {
@@ -66,10 +68,10 @@ const documents: MarkdownDocument[] = [
 ];
 
 const synthesizer = new OpenAICompatibleSynthesizer({
-  apiKey: process.env.RAG_TESTSET_API_KEY!,
-  model: process.env.RAG_TESTSET_MODEL!,
+  apiKey: process.env.NESTJS_RAG_TESTSET_API_KEY!,
+  model: process.env.NESTJS_RAG_TESTSET_MODEL!,
   // Optional: use any provider with a compatible /chat/completions endpoint.
-  baseUrl: process.env.RAG_TESTSET_BASE_URL,
+  baseUrl: process.env.NESTJS_RAG_TESTSET_BASE_URL,
 });
 
 const testset = await generateTestset(documents, synthesizer, { strictEvidence: true });
@@ -106,22 +108,22 @@ npm run diff:changed
 Use the LLM adapter for general-purpose generation:
 
 ```bash
-RAG_TESTSET_API_KEY=... \
-RAG_TESTSET_MODEL=your-model \
-RAG_TESTSET_BASE_URL=https://api.openai.com/v1 \
+NESTJS_RAG_TESTSET_API_KEY=... \
+NESTJS_RAG_TESTSET_MODEL=your-model \
+NESTJS_RAG_TESTSET_BASE_URL=https://api.openai.com/v1 \
 node --experimental-strip-types src/cli.ts generate \
-  --provider openai-compatible --docs ./docs --out ./eval/rag-testset.json
+  --provider openai-compatible --docs ./docs --out ./eval/nestjs-rag-testset.json
 ```
 
-On Windows PowerShell, set the environment variables with `$env:RAG_TESTSET_API_KEY = "..."` and `$env:RAG_TESTSET_MODEL = "..."` before invoking the command.
+On Windows PowerShell, set the environment variables with `$env:NESTJS_RAG_TESTSET_API_KEY = "..."` and `$env:NESTJS_RAG_TESTSET_MODEL = "..."` before invoking the command.
 
 CLI commands:
 
 ```text
-rag-testset generate --docs <dir> --out <file> [--provider demo|openai-compatible]
-rag-testset validate --docs <dir> --dataset <file>
-rag-testset diff --docs <dir> --dataset <file> [--report-only]
-rag-testset help
+nestjs-rag-testset generate --docs <dir> --out <file> [--provider demo|openai-compatible]
+nestjs-rag-testset validate --docs <dir> --dataset <file>
+nestjs-rag-testset diff --docs <dir> --dataset <file> [--report-only]
+nestjs-rag-testset help
 ```
 
 `validate` returns a non-zero exit code when it finds an error. `diff` returns a non-zero exit code when any case is stale or needs review, unless `--report-only` is set.
@@ -130,15 +132,15 @@ rag-testset help
 
 ```ts
 import { Module } from "@nestjs/common";
-import { RagTestsetModule } from "rag-testset-compiler/nestjs";
-import { OpenAICompatibleSynthesizer } from "rag-testset-compiler";
+import { RagTestsetModule } from "nestjs-nestjs-rag-testset-compiler/nestjs";
+import { OpenAICompatibleSynthesizer } from "nestjs-nestjs-rag-testset-compiler";
 
 @Module({
   imports: [
     RagTestsetModule.register({
       synthesizer: new OpenAICompatibleSynthesizer({
-        apiKey: process.env.RAG_TESTSET_API_KEY!,
-        model: process.env.RAG_TESTSET_MODEL!,
+        apiKey: process.env.NESTJS_RAG_TESTSET_API_KEY!,
+        model: process.env.NESTJS_RAG_TESTSET_MODEL!,
       }),
       strictEvidence: true,
     }),
@@ -156,7 +158,7 @@ import type {
   EvidenceSection,
   ScenarioSynthesizer,
   SyntheticCandidate,
-} from "rag-testset-compiler";
+} from "nestjs-nestjs-rag-testset-compiler";
 
 export class MySynthesizer implements ScenarioSynthesizer {
   async generate(sections: EvidenceSection[]): Promise<SyntheticCandidate[]> {
