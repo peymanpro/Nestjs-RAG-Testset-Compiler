@@ -23,7 +23,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "nestjs-rag-testset": "./dist/cli.js"
+    "nestjs-rag-testset": "dist/cli.js"
   },
   "files": [
     "dist",
