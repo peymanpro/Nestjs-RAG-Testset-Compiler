@@ -16,6 +16,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./nestjs": {
+      "types": "./dist/nestjs/index.d.ts",
+      "import": "./dist/nestjs/index.js"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -43,7 +47,16 @@
     "prepack": "npm run build",
     "check:package": "npm pack --dry-run"
   },
+  "peerDependencies": {
+    "@nestjs/common": ">=10.0.0 <13.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@nestjs/common": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@nestjs/common": "12.2.0",
     "@types/node": "26.6.5",
     "typescript": "7.0.2",
     "tsx": "4.23.15"
