@@ -1,0 +1,71 @@
+{
+  "name": "rag-testset-compiler",
+  "version": "0.1.0",
+  "description": "Generate evidence-linked RAG regression test sets and track corpus drift in TypeScript.",
+  "license": "MIT",
+  "author": "Peyman Salimi",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "packageManager": "pnpm@12.15.0",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "rag-testset": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "docs",
+    "examples"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "node -e \"import('node:fs/promises').then(fs => fs.rm('dist', { recursive: true, force: true }))\"",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "tsx --test test/*.test.ts",
+    "test:node": "node --experimental-strip-types --test test/*.test.ts",
+    "demo": "tsx src/cli.ts generate --docs examples/docs --out eval/generated-testset.json",
+    "validate": "tsx src/cli.ts validate --docs examples/docs --dataset eval/generated-testset.json",
+    "diff": "tsx src/cli.ts diff --docs examples/docs --dataset eval/generated-testset.json --report-only",
+    "diff:changed": "tsx src/cli.ts diff --docs examples/changed-docs --dataset eval/generated-testset.json",
+    "prepack": "npm run build",
+    "check:package": "npm pack --dry-run"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "typescript": "7.0.2",
+    "tsx": "4.23.15"
+  },
+  "keywords": [
+    "rag",
+    "retrieval-augmented-generation",
+    "llm-evaluation",
+    "synthetic-data",
+    "testset-generation",
+    "regression-testing",
+    "evidence-grounded",
+    "nestjs",
+    "typescript",
+    "ai"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/peymanpro/RAG-Testset-Compiler.git"
+  },
+  "bugs": {
+    "url": "https://github.com/peymanpro/RAG-Testset-Compiler/issues"
+  },
+  "homepage": "https://github.com/peymanpro/RAG-Testset-Compiler#readme"
+}
