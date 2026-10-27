@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      initial_release:
+        description: Publish the first 0.1.0 release after npm Trusted Publishing is configured
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'peymanpro/Nestjs-RAG-Testset-Compiler' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout full history and tags
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 26
+          package-manager-cache: false
+
+      - name: Install current npm CLI
+        run: npm install --global npm@12.2.1
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build package
+        run: npm run build
+
+      - name: Verify package contents
+        run: npm run check:package
+
+      - name: Smoke-test CLI
+        run: |
+          npm run demo
+          npm run validate
+          npm run diff
+
+      - name: Configure Git identity for release commits
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Initialize a baseline tag on the first main push
+        id: baseline
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if git tag --list 'v[0-9]*' | grep -q .; then
+            echo "created=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [[ "$EVENT_NAME" != "push" || -z "$BEFORE_SHA" || "$BEFORE_SHA" =~ ^0+$ ]]; then
+            echo "No version tag exists yet. Wait for the first push to main to initialize the baseline before dispatching a release." >&2
+            exit 1
+          fi
+
+          git tag v0.0.0 "$BEFORE_SHA"
+          git push origin refs/tags/v0.0.0
+          echo "created=true" >> "$GITHUB_OUTPUT"
+          echo "Created temporary v0.0.0 baseline; automatic publishing is intentionally skipped on this first run."
+
+      - name: Publish initial npm release
+        if: github.event_name == 'workflow_dispatch' && inputs.initial_release == true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          PACKAGE_NAME="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).name")"
+          PACKAGE_VERSION="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")"
+          TAG="v${PACKAGE_VERSION}"
+
+          if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
+            echo "${PACKAGE_NAME}@${PACKAGE_VERSION} is already published; skipping the npm publish step."
+          else
+            npm publish --access public
+          fi
+
+          if ! git rev-parse --verify "refs/tags/${TAG}" >/dev/null 2>&1; then
+            git tag "${TAG}" "$GITHUB_SHA"
+            git push origin "refs/tags/${TAG}"
+          fi
+
+          if ! gh release view "${TAG}" >/dev/null 2>&1; then
+            gh release create "${TAG}" --title "${TAG}" --notes-file CHANGELOG.md --target "$GITHUB_SHA"
+          fi
+
+          if git ls-remote --exit-code --tags origin refs/tags/v0.0.0 >/dev/null 2>&1; then
+            git push origin --delete v0.0.0
+          fi
+
+      - name: Run semantic-release
+        if: steps.baseline.outputs.created == 'false' && (github.event_name != 'workflow_dispatch' || inputs.initial_release != true)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release
