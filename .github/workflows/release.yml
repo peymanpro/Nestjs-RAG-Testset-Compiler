@@ -124,8 +124,18 @@ jobs:
             git push origin --delete v0.0.0
           fi
 
+      - name: Detect completed initial release
+        id: initial
+        shell: bash
+        run: |
+          if git tag --list 'v[0-9]*' | grep -Ev '^v0\\.0\\.0 | grep -q .; then
+            echo "completed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "completed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run semantic-release
-        if: steps.baseline.outputs.created == 'false' && (github.event_name != 'workflow_dispatch' || inputs.initial_release != true)
+        if: steps.baseline.outputs.created == 'false' && steps.initial.outputs.completed == 'true' && (github.event_name != 'workflow_dispatch' || inputs.initial_release != true)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
