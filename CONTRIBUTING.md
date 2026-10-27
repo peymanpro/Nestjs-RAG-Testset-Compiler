@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve RAG Testset Compiler.
+Thanks for helping improve NestJS RAG Testset Compiler.
 
 ## Before opening a pull request
 
