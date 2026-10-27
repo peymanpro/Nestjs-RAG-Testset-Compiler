@@ -1,6 +1,7 @@
 import { DynamicModule, Module, Provider } from "@nestjs/common";
 import { analyzeCorpusDrift, generateTestset, validateTestset } from "../testset.ts";
-import type { GenerateTestsetOptions, MarkdownDocument, ScenarioSynthesizer, Testset, ValidationResult, DriftReport } from "../types.ts";
+import { analyzeChangeImpact } from "../impact.ts";
+import type { ChangeImpactReport, GenerateTestsetOptions, MarkdownDocument, ScenarioSynthesizer, Testset, ValidationResult, DriftReport } from "../types.ts";
 
 export const RAG_TESTSET_OPTIONS = Symbol.for("RAG_TESTSET_OPTIONS");
 
@@ -28,6 +29,10 @@ export class RagTestsetService {
 
   diff(documents: MarkdownDocument[], testset: Testset): DriftReport {
     return analyzeCorpusDrift(documents, testset);
+  }
+
+  impact(previousDocuments: MarkdownDocument[], currentDocuments: MarkdownDocument[], testset: Testset): ChangeImpactReport {
+    return analyzeChangeImpact(previousDocuments, currentDocuments, testset);
   }
 }
 
