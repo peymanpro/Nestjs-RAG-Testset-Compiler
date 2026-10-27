@@ -23,7 +23,7 @@ The project does not claim to be the first test-set generator or a replacement f
 - **Validation:** detect missing or ambiguous sources, broken quotes, hash mismatches, empty cases, duplicate IDs, and normalized duplicate questions.
 - **Provider-agnostic synthesis:** implement the small `ScenarioSynthesizer` interface for any model or generation approach.
 - **OpenAI-compatible adapter:** use a chat-completions endpoint with native `fetch`; no runtime provider SDK is required.
-- **NestJS integration:** optional dynamic module and injectable service under `nestjs-nestjs-rag-testset-compiler/nestjs`.
+- **NestJS integration:** optional dynamic module and injectable service under `nestjs-rag-testset-compiler/nestjs`.
 - **CLI:** generate, validate, and diff JSON test sets; CI-friendly exit codes.
 - **npm and pnpm:** use either package manager for development and installation.
 - **Offline demo:** deterministic sample generation runs without API keys or network access.
@@ -36,9 +36,9 @@ The project does not claim to be the first test-set generator or a replacement f
 ## Installation
 
 ```bash
-npm install nestjs-nestjs-rag-testset-compiler
+npm install nestjs-rag-testset-compiler
 # or
-pnpm add nestjs-nestjs-rag-testset-compiler
+pnpm add nestjs-rag-testset-compiler
 ```
 
 For the NestJS adapter, install NestJS in your application as well. The peer dependency is optional for users of the core library.
@@ -57,8 +57,8 @@ import {
   validateTestset,
   analyzeCorpusDrift,
   OpenAICompatibleSynthesizer,
-} from "nestjs-nestjs-rag-testset-compiler";
-import type { MarkdownDocument } from "nestjs-nestjs-rag-testset-compiler";
+} from "nestjs-rag-testset-compiler";
+import type { MarkdownDocument } from "nestjs-rag-testset-compiler";
 
 const documents: MarkdownDocument[] = [
   {
@@ -132,8 +132,8 @@ nestjs-rag-testset help
 
 ```ts
 import { Module } from "@nestjs/common";
-import { RagTestsetModule } from "nestjs-nestjs-rag-testset-compiler/nestjs";
-import { OpenAICompatibleSynthesizer } from "nestjs-nestjs-rag-testset-compiler";
+import { RagTestsetModule } from "nestjs-rag-testset-compiler/nestjs";
+import { OpenAICompatibleSynthesizer } from "nestjs-rag-testset-compiler";
 
 @Module({
   imports: [
@@ -158,7 +158,7 @@ import type {
   EvidenceSection,
   ScenarioSynthesizer,
   SyntheticCandidate,
-} from "nestjs-nestjs-rag-testset-compiler";
+} from "nestjs-rag-testset-compiler";
 
 export class MySynthesizer implements ScenarioSynthesizer {
   async generate(sections: EvidenceSection[]): Promise<SyntheticCandidate[]> {
