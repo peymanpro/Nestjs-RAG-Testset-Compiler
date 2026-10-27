@@ -6,7 +6,7 @@ A TypeScript library for evidence-linked RAG regression tests.
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.13-brightgreen)](https://nodejs.org/)
 
-**Turn a document corpus into an evidence-linked RAG regression test set, validate every citation, and identify cases affected by corpus changes.** The core is provider-agnostic TypeScript; an OpenAI-compatible adapter and an optional NestJS module are included.
+**NestJS RAG Testset Compiler is a reusable, open-source TypeScript library—not a hosted service or a complete RAG application.** It provides composable building blocks to generate evidence-linked RAG regression test sets, validate source citations, and identify cases affected by corpus changes. The core is provider-agnostic TypeScript, with an OpenAI-compatible adapter and an optional NestJS module.
 
 > **Status: Alpha.** APIs may change before `1.0.0`. Evidence and drift checks are deterministic, but they do not prove semantic entailment or that a RAG system's answer is correct. Review the limitations below before production use.
 
@@ -199,7 +199,20 @@ pnpm build
 pnpm check:package
 ```
 
-The GitHub Actions workflow tests npm and pnpm across the supported Node.js release lines. Build output and package contents are generated from `src/` during `npm run build` / `pnpm build`.
+The GitHub Actions workflow tests npm and pnpm across the supported Node.js release lines. Build output and package contents are generated from `src/` during `npm run build` / `pnpm build`. The automated versioning and publishing lifecycle is documented in [Release process](docs/releasing.md).
+
+## Releases and npm publishing
+
+After the initial package release is set up, qualifying changes merged into `main` are released automatically. The release workflow runs the quality gates, derives the next version from Conventional Commit messages, updates `package.json` and `CHANGELOG.md`, creates a version tag and GitHub Release, and publishes the package to npm using OIDC Trusted Publishing.
+
+| Commit message | Result |
+| --- | --- |
+| `feat: ...` | Minor release |
+| `fix: ...` or `perf: ...` | Patch release |
+| `feat!: ...` or a `BREAKING CHANGE:` footer | Major release |
+| `docs:`, `test:`, `ci:`, `chore:`, `refactor:` | No release |
+
+**One-time initial release:** npm requires the package to exist before its Trusted Publisher can be configured. While authenticated to your npm account, create a temporary `0.0.0` placeholder with `npx setup-npm-trusted-publish nestjs-rag-testset-compiler` ([tool source](https://github.com/azu/setup-npm-trusted-publish)). Then configure the Trusted Publisher described in [Release process](docs/releasing.md). Open GitHub Actions → **Release** → **Run workflow**, select `initial_release`, and run it once. This publishes the actual `0.1.0` library over the placeholder and creates the first GitHub Release. Later qualifying updates to `main` use the automatic release path. No long-lived npm publishing token is stored in GitHub.
 
 ## Security and privacy
 

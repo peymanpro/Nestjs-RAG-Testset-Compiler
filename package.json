@@ -45,7 +45,8 @@
     "diff": "tsx src/cli.ts diff --docs examples/docs --dataset eval/generated-testset.json --report-only",
     "diff:changed": "tsx src/cli.ts diff --docs examples/changed-docs --dataset eval/generated-testset.json",
     "prepack": "npm run build",
-    "check:package": "npm pack --dry-run"
+    "check:package": "npm pack --dry-run",
+    "release": "semantic-release"
   },
   "peerDependencies": {
     "@nestjs/common": ">=10.0.0 <13.0.0"
@@ -57,9 +58,12 @@
   },
   "devDependencies": {
     "@nestjs/common": "12.2.0",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@types/node": "26.6.5",
-    "typescript": "7.0.2",
-    "tsx": "4.23.15"
+    "semantic-release": "^24.2.9",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
   },
   "keywords": [
     "nestjs",
