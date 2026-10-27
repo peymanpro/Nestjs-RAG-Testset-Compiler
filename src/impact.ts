@@ -19,11 +19,13 @@ const STOP_WORDS = new Set([
 ]);
 
 function terms(value: string): Set<string> {
+  const tokens = normalizeText(value)
+    .toLocaleLowerCase("en-US")
+    .match(/[\p{L}\p{N}]+/gu) ?? [];
   return new Set(
-    normalizeText(value)
-      .toLocaleLowerCase("en-US")
-      .match(/[\p{L}\p{N}]+/gu)
-      ?.filter((term) => term.length >= 3 && !STOP_WORDS.has(term)) ?? [],
+    tokens
+      .map((term) => term.length > 4 && term.endsWith("s") ? term.slice(0, -1) : term)
+      .filter((term) => term.length >= 3 && !STOP_WORDS.has(term)),
   );
 }
 
