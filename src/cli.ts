@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
 import { analyzeCorpusDrift, generateTestset, validateTestset } from "./testset.ts";
+import { analyzeChangeImpact } from "./impact.ts";
 import { loadDocuments, readJson, writeJson } from "./io.ts";
 import { OpenAICompatibleSynthesizer, RuleBasedDemoSynthesizer } from "./synthesizers.ts";
 import type { Testset } from "./types.ts";
@@ -28,7 +29,7 @@ function required(args: Arguments, name: string): string {
 }
 
 function printHelp(): void {
-  console.log(`NestJS RAG Testset Compiler\n\nCommands:\n  generate --docs <dir> --out <file> [--provider demo|openai-compatible]\n  validate --docs <dir> --dataset <file>\n  diff --docs <dir> --dataset <file> [--report-only]\n\nOpenAI-compatible provider environment:\n  NESTJS_RAG_TESTSET_API_KEY      Required API key\n  NESTJS_RAG_TESTSET_MODEL        Required model name\n  NESTJS_RAG_TESTSET_BASE_URL     Optional base URL (default: https://api.openai.com/v1)\n\nExamples:\n  nestjs-rag-testset generate --docs ./docs --out ./eval/testset.json\n  nestjs-rag-testset generate --provider openai-compatible --docs ./docs --out ./eval/testset.json\n  nestjs-rag-testset validate --docs ./docs --dataset ./eval/testset.json\n  nestjs-rag-testset diff --docs ./docs --dataset ./eval/testset.json`);
+  console.log(`NestJS RAG Testset Compiler\n\nCommands:\n  generate --docs <dir> --out <file> [--provider demo|openai-compatible]\n  validate --docs <dir> --dataset <file>\n  diff --docs <dir> --dataset <file> [--report-only]\n  impact --before <dir> --after <dir> --dataset <file> [--out <file>] [--report-only]\n\nOpenAI-compatible provider environment:\n  NESTJS_RAG_TESTSET_API_KEY      Required API key\n  NESTJS_RAG_TESTSET_MODEL        Required model name\n  NESTJS_RAG_TESTSET_BASE_URL     Optional base URL (default: https://api.openai.com/v1)\n\nExamples:\n  nestjs-rag-testset generate --docs ./docs --out ./eval/testset.json\n  nestjs-rag-testset generate --provider openai-compatible --docs ./docs --out ./eval/testset.json\n  nestjs-rag-testset validate --docs ./docs --dataset ./eval/testset.json\n  nestjs-rag-testset diff --docs ./docs --dataset ./eval/testset.json`);
 }
 
 async function main(argv: string[]): Promise<number> {
@@ -69,6 +70,25 @@ async function main(argv: string[]): Promise<number> {
     console.log(JSON.stringify(report, null, 2));
     const hasDrift = report.counts.stale > 0 || report.counts["needs-review"] > 0;
     return hasDrift && !args.flags.has("report-only") ? 1 : 0;
+  }
+
+  if (args.command === "impact") {
+    const before = await loadDocuments(required(args, "before"));
+    const after = await loadDocuments(required(args, "after"));
+    const testset = await readJson<Testset>(required(args, "dataset"));
+    const report = analyzeChangeImpact(before, after, testset);
+    const outputPath = args.values.get("out");
+    if (outputPath) await writeJson(outputPath, report);
+    console.log(JSON.stringify(outputPath ? {
+      output: outputPath,
+      previousCorpusHash: report.previousCorpusHash,
+      currentCorpusHash: report.currentCorpusHash,
+      testsetMatchesPreviousCorpus: report.testsetMatchesPreviousCorpus,
+      sectionChanges: report.sectionChanges.length,
+      counts: report.counts,
+    } : report, null, 2));
+    const hasImpact = report.counts.stale > 0 || report.counts["needs-review"] > 0;
+    return hasImpact && !args.flags.has("report-only") ? 1 : 0;
   }
 
   throw new Error(`Unknown command: ${args.command}. Run nestjs-rag-testset help.`);
