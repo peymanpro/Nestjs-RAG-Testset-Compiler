@@ -43,10 +43,10 @@ function resolveEvidenceReference(
 
 function stableClaimId(claim: ClaimInput, evidence: EvidenceReference[]): string {
   const evidenceKey = evidence
-    .map((item) => \`\${item.sourcePath}\\0\${item.sectionId}\\0\${item.quoteHash}\`)
+    .map((item) => `${item.sourcePath}\0${item.sectionId}\0${item.quoteHash}`)
     .sort()
-    .join("\\n");
-  return \`claim-\${sha256(\`\${normalizeQuestion(claim.text)}\\n\${evidenceKey}\`).slice(7, 19)}\`;
+    .join("\n");
+  return `claim-${sha256(`${normalizeQuestion(claim.text)}\n${evidenceKey}`).slice(7, 19)}`;
 }
 
 export async function generateTestset(
@@ -124,14 +124,14 @@ export function validateTestset(documents: MarkdownDocument[], testset: Testset)
         section = undefined;
       }
       if (!section) {
-        issues.push({ code: \`\${codePrefix}_SECTION_MISSING\`, severity: "error", caseId, message: \`Evidence section not found or ambiguous: \${evidence.sourcePath} :: \${evidence.sectionTitle}.\` });
+        issues.push({ code: `${codePrefix}_SECTION_MISSING`, severity: "error", caseId, message: `Evidence section not found or ambiguous: ${evidence.sourcePath} :: ${evidence.sectionTitle}.` });
         continue;
       }
       if (!section.content.includes(evidence.quote)) {
-        issues.push({ code: \`\${codePrefix}_QUOTE_NOT_FOUND\`, severity: "error", caseId, message: \`Evidence quote no longer exists verbatim in \${evidence.sourcePath} :: \${evidence.sectionTitle}.\` });
+        issues.push({ code: `${codePrefix}_QUOTE_NOT_FOUND`, severity: "error", caseId, message: `Evidence quote no longer exists verbatim in ${evidence.sourcePath} :: ${evidence.sectionTitle}.` });
       }
       if (sha256(normalizeText(evidence.quote)) !== evidence.quoteHash) {
-        issues.push({ code: \`\${codePrefix}_HASH_MISMATCH\`, severity: "error", caseId, message: "Stored evidence quote hash does not match the stored quote." });
+        issues.push({ code: `${codePrefix}_HASH_MISMATCH`, severity: "error", caseId, message: "Stored evidence quote hash does not match the stored quote." });
       }
     }
   };
@@ -180,7 +180,7 @@ export function validateTestset(documents: MarkdownDocument[], testset: Testset)
           issues.push({ code: "EMPTY_CLAIM_TEXT", severity: "error", caseId: testCase.id, message: "Claim text must not be empty." });
         }
         if (claimIds.has(claim.id)) {
-          issues.push({ code: "DUPLICATE_CLAIM_ID", severity: "error", caseId: testCase.id, message: \`Duplicate claim ID: \${claim.id}.\` });
+          issues.push({ code: "DUPLICATE_CLAIM_ID", severity: "error", caseId: testCase.id, message: `Duplicate claim ID: ${claim.id}.` });
         }
         claimIds.add(claim.id);
         const normalizedClaim = normalizeQuestion(claim.text ?? "");
@@ -192,10 +192,10 @@ export function validateTestset(documents: MarkdownDocument[], testset: Testset)
           issues.push({ code: "CLAIM_HASH_MISMATCH", severity: "error", caseId: testCase.id, message: "Stored claim text hash does not match the claim text." });
         }
         if (claim.kind !== undefined && !["fact", "condition", "exception", "temporal", "numeric", "causal", "other"].includes(claim.kind)) {
-          issues.push({ code: "UNKNOWN_CLAIM_KIND", severity: "error", caseId: testCase.id, message: \`Unsupported claim kind: \${String(claim.kind)}.\` });
+          issues.push({ code: "UNKNOWN_CLAIM_KIND", severity: "error", caseId: testCase.id, message: `Unsupported claim kind: ${String(claim.kind)}.` });
         }
         if (!Array.isArray(claim.evidence) || claim.evidence.length === 0) {
-          issues.push({ code: "CLAIM_EVIDENCE_REQUIRED", severity: "error", caseId: testCase.id, message: \`Claim \${claim.id || "(unknown)"} must cite at least one evidence quote.\` });
+          issues.push({ code: "CLAIM_EVIDENCE_REQUIRED", severity: "error", caseId: testCase.id, message: `Claim ${claim.id || "(unknown)"} must cite at least one evidence quote.` });
         } else {
           validateEvidenceReferences(claim.evidence, testCase.id, "CLAIM_EVIDENCE");
         }
