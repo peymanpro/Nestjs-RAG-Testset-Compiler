@@ -11,3 +11,4 @@ All notable changes to this project are documented here.
 - Add CLI commands for generation, validation, and drift reports.
 - Add optional NestJS dynamic module and service.
 - Add npm/pnpm CI, package build checks, and release publishing workflow.
+- Use NestJS-prefixed package and CLI names before the first public release.

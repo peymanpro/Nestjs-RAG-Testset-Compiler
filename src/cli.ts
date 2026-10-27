@@ -28,7 +28,7 @@ function required(args: Arguments, name: string): string {
 }
 
 function printHelp(): void {
-  console.log(`RAG Testset Compiler\n\nCommands:\n  generate --docs <dir> --out <file> [--provider demo|openai-compatible]\n  validate --docs <dir> --dataset <file>\n  diff --docs <dir> --dataset <file> [--report-only]\n\nOpenAI-compatible provider environment:\n  RAG_TESTSET_API_KEY      Required API key\n  RAG_TESTSET_MODEL        Required model name\n  RAG_TESTSET_BASE_URL     Optional base URL (default: https://api.openai.com/v1)\n\nExamples:\n  rag-testset generate --docs ./docs --out ./eval/testset.json\n  rag-testset generate --provider openai-compatible --docs ./docs --out ./eval/testset.json\n  rag-testset validate --docs ./docs --dataset ./eval/testset.json\n  rag-testset diff --docs ./docs --dataset ./eval/testset.json`);
+  console.log(`NestJS RAG Testset Compiler\n\nCommands:\n  generate --docs <dir> --out <file> [--provider demo|openai-compatible]\n  validate --docs <dir> --dataset <file>\n  diff --docs <dir> --dataset <file> [--report-only]\n\nOpenAI-compatible provider environment:\n  NESTJS_RAG_TESTSET_API_KEY      Required API key\n  NESTJS_RAG_TESTSET_MODEL        Required model name\n  NESTJS_RAG_TESTSET_BASE_URL     Optional base URL (default: https://api.openai.com/v1)\n\nExamples:\n  nestjs-rag-testset generate --docs ./docs --out ./eval/testset.json\n  nestjs-rag-testset generate --provider openai-compatible --docs ./docs --out ./eval/testset.json\n  nestjs-rag-testset validate --docs ./docs --dataset ./eval/testset.json\n  nestjs-rag-testset diff --docs ./docs --dataset ./eval/testset.json`);
 }
 
 async function main(argv: string[]): Promise<number> {
@@ -42,9 +42,9 @@ async function main(argv: string[]): Promise<number> {
       ? new RuleBasedDemoSynthesizer()
       : provider === "openai-compatible"
         ? new OpenAICompatibleSynthesizer({
-            apiKey: process.env.RAG_TESTSET_API_KEY ?? "",
-            model: process.env.RAG_TESTSET_MODEL ?? "",
-            ...(process.env.RAG_TESTSET_BASE_URL ? { baseUrl: process.env.RAG_TESTSET_BASE_URL } : {}),
+            apiKey: process.env.NESTJS_RAG_TESTSET_API_KEY ?? "",
+            model: process.env.NESTJS_RAG_TESTSET_MODEL ?? "",
+            ...(process.env.NESTJS_RAG_TESTSET_BASE_URL ? { baseUrl: process.env.NESTJS_RAG_TESTSET_BASE_URL } : {}),
           })
         : undefined;
     if (!synthesizer) throw new Error(`Unsupported provider: ${provider}. Use demo or openai-compatible.`);
@@ -71,7 +71,7 @@ async function main(argv: string[]): Promise<number> {
     return hasDrift && !args.flags.has("report-only") ? 1 : 0;
   }
 
-  throw new Error(`Unknown command: ${args.command}. Run rag-testset help.`);
+  throw new Error(`Unknown command: ${args.command}. Run nestjs-rag-testset help.`);
 }
 
 const executedFile = process.argv[1] ? pathToFileURL(process.argv[1]).href : "";

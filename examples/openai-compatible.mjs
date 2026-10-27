@@ -17,9 +17,9 @@ async function collectMarkdown(root) {
 
 const documents = await collectMarkdown("./examples/docs");
 const synthesizer = new OpenAICompatibleSynthesizer({
-  apiKey: process.env.RAG_TESTSET_API_KEY ?? "",
-  model: process.env.RAG_TESTSET_MODEL ?? "",
-  baseUrl: process.env.RAG_TESTSET_BASE_URL,
+  apiKey: process.env.NESTJS_RAG_TESTSET_API_KEY ?? "",
+  model: process.env.NESTJS_RAG_TESTSET_MODEL ?? "",
+  baseUrl: process.env.NESTJS_RAG_TESTSET_BASE_URL,
 });
 const testset = await generateTestset(documents, synthesizer, { strictEvidence: true });
 const validation = validateTestset(documents, testset);

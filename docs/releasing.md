@@ -9,7 +9,7 @@ The repository publishes the package when a GitHub Release is published. Before 
 Configure npm trusted publishing for this package before using the workflow:
 
 1. Create the package on npm under the intended maintainer account or organization.
-2. In npm package settings, add a GitHub Actions trusted publisher for `peymanpro/RAG-Testset-Compiler` and the `.github/workflows/publish.yml` workflow.
+2. In npm package settings, add a GitHub Actions trusted publisher for `peymanpro/Nestjs-RAG-Testset-Compiler` and the `.github/workflows/publish.yml` workflow.
 3. Ensure the package name and repository metadata match exactly.
 4. Verify the trusted-publisher environment requirements in npm's current documentation. Do not add a long-lived npm access token to GitHub secrets for this workflow.
 5. Publish a GitHub Release only after the code, changelog, package files, and CI results have been reviewed.
