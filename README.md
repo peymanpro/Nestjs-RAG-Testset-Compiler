@@ -19,12 +19,14 @@ The project does not claim to be the first test-set generator or a replacement f
 ## Features
 
 - **Evidence-linked test cases:** source path, section ID, exact quote, quote hash, and section fingerprint.
+- **Claim provenance:** optional atomic claim records with stable IDs, text hashes, claim kinds, and their own evidence links; older schema-version 1 test sets remain supported.
+- **Change-impact engine:** compare a baseline corpus with an updated corpus, detect changed sections, trace affected test cases and claims, and recommend keep/review/regenerate actions.
 - **Corpus drift analysis:** detect removed sections or quotes, identify changed context, and re-review abstention cases after any corpus change.
 - **Validation:** detect missing or ambiguous sources, broken quotes, hash mismatches, empty cases, duplicate IDs, and normalized duplicate questions.
 - **Provider-agnostic synthesis:** implement the small `ScenarioSynthesizer` interface for any model or generation approach.
 - **OpenAI-compatible adapter:** use a chat-completions endpoint with native `fetch`; no runtime provider SDK is required.
 - **NestJS integration:** optional dynamic module and injectable service under `nestjs-rag-testset-compiler/nestjs`.
-- **CLI:** generate, validate, and diff JSON test sets; CI-friendly exit codes.
+- **CLI:** generate, validate, diff corpus drift, and analyze change impact between two corpus versions; CI-friendly exit codes.
 - **npm and pnpm:** use either package manager for development and installation.
 - **Offline demo:** deterministic sample generation runs without API keys or network access.
 
@@ -56,6 +58,7 @@ import {
   generateTestset,
   validateTestset,
   analyzeCorpusDrift,
+  analyzeChangeImpact,
   OpenAICompatibleSynthesizer,
 } from "nestjs-rag-testset-compiler";
 import type { MarkdownDocument } from "nestjs-rag-testset-compiler";
@@ -81,7 +84,17 @@ if (!validation.valid) throw new Error(JSON.stringify(validation.issues));
 // Store the JSON test set in version control. Re-run after source changes.
 const drift = analyzeCorpusDrift(documents, testset);
 console.log(drift.counts);
+
+// After updating source documents, identify the test cases that need attention.
+const updatedDocuments = documents.map((document) => ({
+  ...document,
+  content: document.content.replace("7 days", "14 days"),
+}));
+const impact = analyzeChangeImpact(documents, updatedDocuments, testset);
+console.log(impact.counts);
+console.log(impact.entries.filter((entry) => entry.status !== "unaffected"));
 ```
+
 
 The provider returns candidate cases. `generateTestset` attaches verified section metadata and hashes; `strictEvidence: true` rejects cases with missing or ambiguous evidence. This does not establish semantic correctness, so keep human review and evaluation of the actual RAG system in your workflow.
 
@@ -103,6 +116,9 @@ npm run diff
 
 # Compare against the changed-corpus fixture; exit code 1 is expected
 npm run diff:changed
+
+# Identify impacted cases between a baseline and updated corpus
+npm run impact
 ```
 
 Use the LLM adapter for general-purpose generation:
@@ -123,10 +139,11 @@ CLI commands:
 nestjs-rag-testset generate --docs <dir> --out <file> [--provider demo|openai-compatible]
 nestjs-rag-testset validate --docs <dir> --dataset <file>
 nestjs-rag-testset diff --docs <dir> --dataset <file> [--report-only]
+nestjs-rag-testset impact --before <dir> --after <dir> --dataset <file> [--out <file>] [--report-only]
 nestjs-rag-testset help
 ```
 
-`validate` returns a non-zero exit code when it finds an error. `diff` returns a non-zero exit code when any case is stale or needs review, unless `--report-only` is set.
+`validate` returns a non-zero exit code when it finds an error. `diff` returns a non-zero exit code when any case is stale or needs review, unless `--report-only` is set. `impact` compares two corpus directories, writes a detailed JSON report when `--out` is supplied, and returns a non-zero exit code when cases need review or regeneration unless `--report-only` is set. See [Change-impact analysis](docs/change-impact.md) for status semantics and limitations.
 
 ## NestJS integration
 
@@ -173,11 +190,13 @@ For answerable cases, each evidence item must identify a real `sectionId` and in
 
 ## Test-case lifecycle
 
-Each generated case records a stable ID, question, expected answer, scenario type, expected behavior, evidence references, and the corpus fingerprint at generation time. Each evidence reference records a source path, section ID, exact quote, quote hash, and section hash.
+Each generated case records a stable ID, question, expected answer, scenario type, expected behavior, evidence references, and the corpus fingerprint at generation time. Each evidence reference records a source path, section ID, exact quote, quote hash, and section hash. Synthesizers may also return atomic claims with stable IDs and their own evidence links; claim text integrity is checked with a hash. Claim metadata is additive and optional, so existing schema-version 1 test sets remain readable.
 
 - `current`: each cited section and quote remains unchanged.
 - `needs-review`: the quoted evidence remains but its surrounding section has changed, or an abstention case needs rechecking because the corpus changed.
 - `stale`: a referenced section or quote disappeared, or an answerable case has no evidence.
+
+For the related before/after comparison, the change-impact engine adds `unaffected` (no direct or lexical impact signal found) and recommends `keep`, `review`, or `regenerate`. Lexical overlap is a screening heuristic only—not semantic proof. Read the limitations in [Change-impact analysis](docs/change-impact.md).
 
 A `stale` status is a conservative maintenance signal—not proof that the answer is false. Similarly, `current` means the tracked evidence did not change; it does not mean the generated answer is semantically correct.
 
