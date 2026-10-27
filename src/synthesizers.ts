@@ -54,7 +54,18 @@ export class RuleBasedDemoSynthesizer implements ScenarioSynthesizer {
       expectedBehavior: "abstain",
       evidence: [],
     });
-    return candidates;
+    return candidates.map((candidate) => ({
+      ...candidate,
+      ...(candidate.expectedBehavior === "answer"
+        ? {
+            claims: candidate.evidence.map((item) => ({
+              text: candidate.type === "multi-hop" ? item.quote : candidate.expectedAnswer,
+              kind: "fact" as const,
+              evidence: candidate.type === "multi-hop" ? [item] : candidate.evidence,
+            })),
+          }
+        : { claims: [] }),
+    }));
   }
 }
 
@@ -123,7 +134,8 @@ export class OpenAICompatibleSynthesizer implements ScenarioSynthesizer {
       "Use unanswerable cases only when the supplied corpus does not support a reliable answer; those cases must have expectedBehavior=abstain and evidence=[].",
       "Questions must be natural, distinct, precise, and useful for detecting retrieval or answer regressions.",
       "Create a balanced mix of single-hop, multi-hop, and unanswerable cases when the corpus supports them.",
-      "Return only a JSON object with this exact shape: {\"cases\":[{\"question\":string,\"expectedAnswer\":string,\"type\":\"single-hop\"|\"multi-hop\"|\"unanswerable\"|\"custom\",\"expectedBehavior\":\"answer\"|\"abstain\",\"evidence\":[{\"sourcePath\":string,\"sectionTitle\":string,\"sectionId\":string,\"quote\":string}]}]}.",
+      "Return only a JSON object with this exact shape: {\"cases\":[{\"question\":string,\"expectedAnswer\":string,\"type\":\"single-hop\"|\"multi-hop\"|\"unanswerable\"|\"custom\",\"expectedBehavior\":\"answer\"|\"abstain\",\"evidence\":[{\"sourcePath\":string,\"sectionTitle\":string,\"sectionId\":string,\"quote\":string}],\"claims\":[{\"text\":string,\"kind\":\"fact\"|\"condition\"|\"exception\"|\"temporal\"|\"numeric\"|\"causal\"|\"other\",\"evidence\":[{\"sourcePath\":string,\"sectionTitle\":string,\"sectionId\":string,\"quote\":string}]}]}]}.",
+      "For answerable cases, include atomic claims when possible; each claim must cite exact supporting evidence. Claims are optional for compatibility, but never invent claim evidence.",
       "Do not wrap JSON in Markdown fences. Do not invent section IDs, sources, or quotes.",
     ].join(" ");
     const user = JSON.stringify({ task: "Generate up to 30 evidence-grounded regression cases from the following corpus.", corpus: context });
@@ -183,13 +195,39 @@ function validateCandidate(value: unknown, index: number): SyntheticCandidate {
     }
     return { sourcePath: entry.sourcePath as string, sectionTitle: entry.sectionTitle as string, sectionId: entry.sectionId as string, quote: entry.quote as string };
   });
-  if (candidate.expectedBehavior === "answer" && evidence.length === 0) throw new Error(`Answerable generated case ${index} must cite evidence.`);
-  if (candidate.expectedBehavior === "abstain" && evidence.length > 0) throw new Error(`Abstention generated case ${index} must have an empty evidence array.`);
+  if (candidate.expectedBehavior === "answer" && evidence.length === 0) throw new Error("Answerable generated case " + index + " must cite evidence.");
+  if (candidate.expectedBehavior === "abstain" && evidence.length > 0) throw new Error("Abstention generated case " + index + " must have an empty evidence array.");
+  let claims: NonNullable<SyntheticCandidate["claims"]> | undefined;
+  if (candidate.claims !== undefined) {
+    if (!Array.isArray(candidate.claims)) throw new Error("Generated case " + index + " claims must be an array.");
+    claims = candidate.claims.map((value, claimIndex) => {
+      if (!value || typeof value !== "object") throw new Error("Claim " + claimIndex + " in case " + index + " is not an object.");
+      const claim = value as Record<string, unknown>;
+      if (typeof claim.text !== "string" || !claim.text.trim()) throw new Error("Claim " + claimIndex + " in case " + index + " requires non-empty text.");
+      if (!Array.isArray(claim.evidence) || claim.evidence.length === 0) throw new Error("Claim " + claimIndex + " in case " + index + " must cite evidence.");
+      const kindValues = ["fact", "condition", "exception", "temporal", "numeric", "causal", "other"];
+      if (claim.kind !== undefined && (typeof claim.kind !== "string" || !kindValues.includes(claim.kind))) throw new Error("Claim " + claimIndex + " in case " + index + " has an unsupported kind.");
+      const claimEvidence = claim.evidence.map((item, evidenceIndex) => {
+        if (!item || typeof item !== "object") throw new Error("Claim evidence " + evidenceIndex + " in case " + index + " is not an object.");
+        const entry = item as Record<string, unknown>;
+        for (const key of ["sourcePath", "sectionTitle", "quote", "sectionId"] as const) {
+          if (typeof entry[key] !== "string" || !entry[key].trim()) throw new Error("Claim evidence " + evidenceIndex + " in case " + index + " requires " + key + ".");
+        }
+        return { sourcePath: entry.sourcePath as string, sectionTitle: entry.sectionTitle as string, sectionId: entry.sectionId as string, quote: entry.quote as string };
+      });
+      return {
+        text: claim.text,
+        ...(typeof claim.kind === "string" ? { kind: claim.kind as NonNullable<SyntheticCandidate["claims"]>[number]["kind"] } : {}),
+        evidence: claimEvidence,
+      };
+    });
+  }
   return {
     question: candidate.question,
     expectedAnswer: candidate.expectedAnswer,
     type: candidate.type as SyntheticCandidate["type"],
     expectedBehavior: candidate.expectedBehavior as SyntheticCandidate["expectedBehavior"],
     evidence,
+    ...(claims !== undefined ? { claims } : {}),
   };
 }
