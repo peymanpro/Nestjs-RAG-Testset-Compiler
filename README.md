@@ -5,6 +5,7 @@ A TypeScript library for evidence-linked RAG regression tests.
 [![CI](https://github.com/peymanpro/Nestjs-RAG-Testset-Compiler/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/peymanpro/Nestjs-RAG-Testset-Compiler/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.13-brightgreen)](https://nodejs.org/)
+[![npm version](https://img.shields.io/npm/v/nestjs-rag-testset-compiler)](https://www.npmjs.com/package/nestjs-rag-testset-compiler)
 
 **NestJS RAG Testset Compiler is a reusable, open-source TypeScript library—not a hosted service or a complete RAG application.** It provides composable building blocks to generate evidence-linked RAG regression test sets, validate source citations, and identify cases affected by corpus changes. The core is provider-agnostic TypeScript, with an OpenAI-compatible adapter and an optional NestJS module.
 
@@ -36,6 +37,8 @@ The project does not claim to be the first test-set generator or a replacement f
 - npm or pnpm. The repository currently pins pnpm `12.15.0` for maintainers; consumers may install the package with npm or pnpm.
 
 ## Installation
+
+Package: [**nestjs-rag-testset-compiler on npm**](https://www.npmjs.com/package/nestjs-rag-testset-compiler).
 
 ```bash
 npm install nestjs-rag-testset-compiler
