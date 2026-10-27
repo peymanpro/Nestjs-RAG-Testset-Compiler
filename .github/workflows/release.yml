@@ -100,6 +100,11 @@ jobs:
           PACKAGE_VERSION="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).version")"
           TAG="v${PACKAGE_VERSION}"
 
+          if [[ "${PACKAGE_VERSION}" != "0.1.0" ]]; then
+            echo "The initial-release path is only for version 0.1.0; package.json currently declares ${PACKAGE_VERSION}." >&2
+            exit 1
+          fi
+
           if npm view "${PACKAGE_NAME}@${PACKAGE_VERSION}" version >/dev/null 2>&1; then
             echo "${PACKAGE_NAME}@${PACKAGE_VERSION} is already published; skipping the npm publish step."
           else
