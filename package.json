@@ -1,7 +1,7 @@
 {
   "name": "nestjs-rag-testset-compiler",
   "version": "0.1.0",
-  "description": "Generate evidence-linked RAG regression test sets and track corpus drift in TypeScript.",
+  "description": "NestJS-first TypeScript library for evidence-linked RAG regression test sets and corpus drift.",
   "license": "MIT",
   "author": "Peyman Salimi",
   "type": "module",
