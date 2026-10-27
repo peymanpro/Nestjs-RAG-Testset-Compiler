@@ -129,7 +129,7 @@ jobs:
         id: initial
         shell: bash
         run: |
-          if git tag --list 'v[0-9]*' | grep -Ev '^v0\\.0\\.0 | grep -q .; then
+          if git tag --list 'v[0-9]*' | awk '$0 != "v0.0.0" { found=1 } END { exit !found }'; then
             echo "completed=true" >> "$GITHUB_OUTPUT"
           else
             echo "completed=false" >> "$GITHUB_OUTPUT"
