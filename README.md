@@ -212,7 +212,7 @@ After the initial package release is set up, qualifying changes merged into `mai
 | `feat!: ...` or a `BREAKING CHANGE:` footer | Major release |
 | `docs:`, `test:`, `ci:`, `chore:`, `refactor:` | No release |
 
-**One-time initial release:** after creating the npm package and configuring its Trusted Publisher, open GitHub Actions → **Release** → **Run workflow**, select `initial_release`, and run it once. This publishes the current `0.1.0` package and creates its first GitHub Release. Later qualifying updates to `main` use the automatic release path. No long-lived npm publishing token is required.
+**One-time initial release:** npm requires the package to exist before its Trusted Publisher can be configured. While authenticated to your npm account, create a temporary `0.0.0` placeholder with `npx setup-npm-trusted-publish nestjs-rag-testset-compiler` ([tool source](https://github.com/azu/setup-npm-trusted-publish)). Then configure the Trusted Publisher described in [Release process](docs/releasing.md). Open GitHub Actions → **Release** → **Run workflow**, select `initial_release`, and run it once. This publishes the actual `0.1.0` library over the placeholder and creates the first GitHub Release. Later qualifying updates to `main` use the automatic release path. No long-lived npm publishing token is stored in GitHub.
 
 ## Security and privacy
 
