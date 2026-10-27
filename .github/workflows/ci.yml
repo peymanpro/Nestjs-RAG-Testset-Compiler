@@ -51,3 +51,4 @@ jobs:
           ${{ matrix.package_manager }} run demo
           ${{ matrix.package_manager }} run validate
           ${{ matrix.package_manager }} run diff
+          ${{ matrix.package_manager }} run impact
