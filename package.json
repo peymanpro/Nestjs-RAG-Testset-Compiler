@@ -80,10 +80,5 @@
   "bugs": {
     "url": "https://github.com/peymanpro/RAG-Testset-Compiler/issues"
   },
-  "homepage": "https://github.com/peymanpro/RAG-Testset-Compiler#readme",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  }
+  "homepage": "https://github.com/peymanpro/RAG-Testset-Compiler#readme"
 }
