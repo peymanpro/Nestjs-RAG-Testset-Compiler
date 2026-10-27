@@ -133,6 +133,8 @@ export interface ChangeImpactEntry {
 export interface ChangeImpactReport {
   previousCorpusHash: string;
   currentCorpusHash: string;
+  /** False when the test set was not generated from the supplied baseline corpus. */
+  testsetMatchesPreviousCorpus: boolean;
   sectionChanges: SectionChange[];
   counts: Record<ChangeImpactStatus, number>;
   entries: ChangeImpactEntry[];
